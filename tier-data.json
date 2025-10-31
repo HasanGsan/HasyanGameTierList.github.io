@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "generatedAt": "2025-10-31T10:32:56.675Z",
+    "total": 1,
+    "tiers": [
+      "S",
+      "A",
+      "B",
+      "C",
+      "D",
+      "F"
+    ]
+  },
+  "games": [
+    {
+      "id": 1761906767654,
+      "title": "DARK SOULS 3",
+      "tier": "S",
+      "image": "images/1761906767654.webp"
+    }
+  ]
+}
