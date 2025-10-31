@@ -193,6 +193,8 @@ function resetCrop() {
 function addGame() {
     const title = document.getElementById('gameTitle').value.trim();
     const tier = document.getElementById('gameTier').value;
+    const descriptionInput = document.getElementById('gameDescription');
+    const description = descriptionInput ? descriptionInput.value.trim() : '';
     
     if (!title) {
         alert('Please enter game title');
@@ -210,7 +212,8 @@ function addGame() {
         id: Date.now(),
         title: title,
         tier: tier,
-        image: croppedImageData
+        image: croppedImageData,
+        description: description
     };
     
     games.push(newGame);
@@ -219,6 +222,7 @@ function addGame() {
     // Очищаем форму
     document.getElementById('gameTitle').value = '';
     document.getElementById('gameTier').value = 'S';
+    if (descriptionInput) descriptionInput.value = '';
     croppedImageData = null;
     currentImage = null;
     document.getElementById('cropperContainer').style.display = 'none';
@@ -301,6 +305,7 @@ function renderGamesList() {
                 <select class="terminal-select" style="width: 100px;" onchange="changeTier(${game.id}, this.value)">
                     ${TIERS.map(tier => `<option value="${tier}" ${game.tier === tier ? 'selected' : ''}>${tier}</option>`).join('')}
                 </select>
+                <button class="btn btn-secondary" onclick="editDescription(${game.id})">EDIT DESC</button>
                 <button class="btn btn-danger" onclick="deleteGame(${game.id})">DELETE</button>
             </div>
         `;
@@ -425,7 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     id: g.id || Date.now() + Math.floor(Math.random()*1000),
                     title: g.title || 'Untitled',
                     tier: TIERS.includes(g.tier) ? g.tier : 'S',
-                    image: g.image
+                    image: g.image,
+                    description: typeof g.description === 'string' ? g.description : ''
                 }));
                 saveGames(imported);
                 renderGamesList();
@@ -437,6 +443,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    try {
+        const tierEl = document.getElementById('gameTier');
+        if (tierEl && !document.getElementById('gameDescription')) {
+            const group = document.createElement('div');
+            group.className = 'form-group';
+            group.innerHTML = `
+                <label>DESCRIPTION:</label>
+                <textarea id="gameDescription" class="terminal-input" rows="3" placeholder="Enter game description..."></textarea>
+            `;
+            const parent = tierEl.parentElement;
+            if (parent && parent.parentElement) {
+                parent.parentElement.insertBefore(group, parent.nextSibling);
+            }
+        }
+    } catch {}
 });
 
 // ==== Экспорт данных в ZIP (tier-data.json + images/) ====
@@ -469,7 +490,7 @@ async function exportTierPackZip() {
         const imageBlob = dataURLToBlob(game.image);
         const fileName = `${game.id}.webp`;
         imagesFolder.file(fileName, imageBlob);
-        exportGames.push({ id: game.id, title: game.title, tier: game.tier, image: `images/${fileName}` });
+        exportGames.push({ id: game.id, title: game.title, tier: game.tier, image: `images/${fileName}`, description: game.description || '' });
     }
     const meta = { generatedAt: new Date().toISOString(), total: games.length, tiers: TIERS };
     zip.file('tier-data.json', JSON.stringify({ meta, games: exportGames }, null, 2));
@@ -486,4 +507,48 @@ async function exportTierPackZip() {
 
 // Глобально для вызова из кнопки админки
 window.exportTierPackZip = exportTierPackZip;
+
+function ensureDescModal() {
+    if (document.getElementById('descModal')) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'descModal';
+    overlay.innerHTML = `
+        <div class="modal-window">
+            <div class="modal-title">EDIT DESCRIPTION</div>
+            <div class="form-group" style="margin-top:10px;">
+                <textarea id="descModalTextarea" class="terminal-input" rows="6" placeholder="Type description..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="descCancelBtn" class="btn btn-secondary">CANCEL</button>
+                <button id="descSaveBtn" class="btn btn-primary">SAVE</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function editDescription(id) {
+    ensureDescModal();
+    const games = loadGames();
+    const game = games.find(g => g.id === id);
+    if (!game) return;
+    const overlay = document.getElementById('descModal');
+    const textarea = document.getElementById('descModalTextarea');
+    textarea.value = game.description || '';
+    overlay.style.display = 'flex';
+    const cancelBtn = document.getElementById('descCancelBtn');
+    const saveBtn = document.getElementById('descSaveBtn');
+    const close = () => { overlay.style.display = 'none'; };
+    cancelBtn.onclick = close;
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+    saveBtn.onclick = () => {
+        game.description = textarea.value.trim();
+        saveGames(games);
+        renderGamesList();
+        close();
+    };
+}
+
+window.editDescription = editDescription;
 

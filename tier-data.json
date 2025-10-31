@@ -1,7 +1,7 @@
 {
   "meta": {
-    "generatedAt": "2025-10-31T10:32:56.675Z",
-    "total": 1,
+    "generatedAt": "2025-10-31T15:06:06.760Z",
+    "total": 4,
     "tiers": [
       "S",
       "A",
@@ -17,6 +17,24 @@
       "title": "DARK SOULS 3",
       "tier": "S",
       "image": "images/1761906767654.webp"
+    },
+    {
+      "id": 1761922722675,
+      "title": "Underrail",
+      "tier": "S",
+      "image": "images/1761922722675.webp"
+    },
+    {
+      "id": 1761922864707,
+      "title": "Lobotomy Corporation",
+      "tier": "S",
+      "image": "images/1761922864707.webp"
+    },
+    {
+      "id": 1761922925157,
+      "title": "Alien Shooter 2",
+      "tier": "A",
+      "image": "images/1761922925157.webp"
     }
   ]
 }

@@ -69,6 +69,7 @@ async function renderTierList() {
                 
                 gameCard.appendChild(img);
                 gameCard.appendChild(title);
+                gameCard.addEventListener('click', () => showGameDescription(game));
                 tierContent.appendChild(gameCard);
             });
         }
@@ -120,4 +121,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 30);
 });
+
+function ensureViewModal() {
+    if (document.getElementById('viewModal')) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'viewModal';
+    overlay.innerHTML = `
+        <div class="modal-window">
+            <div class="modal-header">
+                <div class="modal-title" id="viewTitle"></div>
+                <button class="btn btn-secondary" id="viewCloseBtn">CLOSE</button>
+            </div>
+            <div class="modal-body">
+                <div class="view-image" id="viewImageWrap"><img id="viewImage" alt=""></div>
+                <div class="view-tier" id="viewTier"></div>
+                <div class="view-description" id="viewDescription"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function showGameDescription(game) {
+    ensureViewModal();
+    const overlay = document.getElementById('viewModal');
+    const title = document.getElementById('viewTitle');
+    const img = document.getElementById('viewImage');
+    const tier = document.getElementById('viewTier');
+    const desc = document.getElementById('viewDescription');
+    title.textContent = game.title;
+    img.src = game.image;
+    img.alt = game.title;
+    tier.textContent = `TIER: ${game.tier}`;
+    desc.textContent = game.description && game.description.length ? game.description : '[NO DESCRIPTION]';
+    overlay.style.display = 'flex';
+    const closeBtn = document.getElementById('viewCloseBtn');
+    const close = () => { overlay.style.display = 'none'; };
+    closeBtn.onclick = close;
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+}
 
