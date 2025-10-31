@@ -9,9 +9,7 @@ async function loadGames() {
                 return json.games;
             }
         }
-    } catch (e) {
-        // игнорируем и падаем на localStorage
-    }
+    } catch (e) {}
     const data = localStorage.getItem('tierListData');
     if (data) {
         return JSON.parse(data);
@@ -84,7 +82,6 @@ async function renderTierList() {
 
 function updateStats(games) {
     document.getElementById('totalGames').textContent = games.length;
-    
     const lastUpdateData = localStorage.getItem('lastUpdate');
     if (lastUpdateData) {
         const date = new Date(lastUpdateData);
@@ -103,10 +100,92 @@ function formatDate(date) {
     return `${day}.${month}.${year} ${hours}:${minutes}`;
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await renderTierList();
+function startHackingSequence() {
+    const overlay = document.createElement('div');
+    overlay.className = 'hacking-overlay';
+    overlay.innerHTML = `
+        <div class="hacking-terminal">
+            <div class="hacking-content" id="hackingContent"></div>
+            <div class="hack-progress"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.style.display = 'flex';
+
+    const content = document.getElementById('hackingContent');
+    const hackLines = [
+        {text: "> INITIATING BIOS HACK SEQUENCE...", delay: 200, type: 'command'},
+        {text: "[SYSTEM]: Mounting virtual partitions...", delay: 400, type: 'output'},
+        {text: "> sudo rm -rf / --no-preserve-root", delay: 300, type: 'command'},
+        {text: "[ERROR]: Permission denied. Escalating privileges...", delay: 500, type: 'output'},
+        {text: "> exploit CVE-2024-1337 --target=hasyan_archives", delay: 400, type: 'command'},
+        {text: "[SUCCESS]: Vulnerability exploited. Bypassing security...", delay: 600, type: 'output'},
+        {text: "> inject payload --type=mem_exec --offset=0x7FF", delay: 350, type: 'command'},
+        {text: "[SYSTEM]: Memory injection successful. Overwriting kernel...", delay: 550, type: 'output'},
+        {text: "> decrypt --algo=aes256 --key=0x4E336E --target=/sys/tier_data", delay: 450, type: 'command'},
+        {text: "[SUCCESS]: Data decrypted. Loading archives...", delay: 700, type: 'output'},
+        {text: "ACCESS GRANTED. WELCOME TO HASYAN ARCHIVES.", delay: 800, type: 'success'}
+    ];
+
+    let totalDelay = 0;
     
-    // Эффект печатающегося текста для промпта
+    hackLines.forEach((line, index) => {
+        setTimeout(() => {
+            const lineEl = document.createElement('div');
+            lineEl.className = `hack-line ${line.type === 'command' ? 'hack-command' : 
+                               line.type === 'success' ? 'hack-success' : 'hack-output'}`;
+            lineEl.textContent = line.text;
+            content.appendChild(lineEl);
+            content.scrollTop = content.scrollHeight;
+
+            if (index === hackLines.length - 1) {
+                setTimeout(() => {
+                    const logo = document.createElement('div');
+                    logo.className = 'hack-logo';
+                    logo.innerHTML = '⚡ H4SY4N ⚡';
+                    content.appendChild(logo);
+                    
+                    setTimeout(() => {
+                        overlay.style.opacity = '0';
+                        setTimeout(() => {
+                            document.body.removeChild(overlay);
+                            renderTierList();
+                        }, 1000);
+                    }, 2000);
+                }, 500);
+            }
+        }, totalDelay);
+        totalDelay += line.delay;
+    });
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(frequency, duration) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'square';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+    }
+
+    setTimeout(() => playBeep(800, 0.1), 200);
+    setTimeout(() => playBeep(600, 0.1), 600);
+    setTimeout(() => playBeep(1000, 0.2), 1200);
+    setTimeout(() => playBeep(400, 0.1), 1800);
+    setTimeout(() => playBeep(1200, 0.3), 2500);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await startHackingSequence();
+    
     const prompt = document.querySelector('.command-prompt');
     const originalText = prompt.textContent;
     prompt.textContent = '';
@@ -161,4 +240,3 @@ function showGameDescription(game) {
     closeBtn.onclick = close;
     overlay.onclick = (e) => { if (e.target === overlay) close(); };
 }
-
