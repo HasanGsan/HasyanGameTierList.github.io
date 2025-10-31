@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HASYAN GAME TIER LIST // SYSTEM ARCHIVES</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="crt-overlay"></div>
+    
+    <div class="container">
+        <header class="terminal-header">
+            <div class="header-line">
+                <span class="blink">█</span> HASYAN GAME ARCHIVES v2.47.3
+            </div>
+            <div class="header-subline">
+                [SYSTEM STATUS: ONLINE] [DATA INTEGRITY: 100%] [ACCESS LEVEL: PUBLIC]
+            </div>
+        </header>
+
+        <div class="terminal-body">
+            <div class="command-prompt">
+                <span class="prompt-symbol">&gt;&gt;</span> Loading tier list database...
+            </div>
+            
+            <div id="tierList" class="tier-list">
+                <!-- Tier list будет генерироваться динамически -->
+            </div>
+
+            <div class="footer-info">
+                <div class="glitch-text" data-text="CLASSIFIED ARCHIVES">CLASSIFIED ARCHIVES</div>
+                <div class="status-bar">
+                    <span>TOTAL ENTRIES: <span id="totalGames">0</span></span>
+                    <span>LAST UPDATE: <span id="lastUpdate">NEVER</span></span>
+                </div>
+                
+                <!-- Секретная кнопка доступа -->
+                <div class="secret-access-container">
+                    <a href="login.html" class="secret-access-btn">
+                        <span class="access-icon">🔐</span>
+                        <span class="access-text">
+                            <span class="access-main">RESTRICTED ACCESS</span>
+                            <span class="access-sub">// AUTHORIZATION REQUIRED</span>
+                        </span>
+                        <span class="access-arrow">&gt;&gt;</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

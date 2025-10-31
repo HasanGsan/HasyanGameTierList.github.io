@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACCESS CONTROL // AUTH REQUIRED</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+        
+        .login-box {
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            border: 3px solid var(--border-color);
+            background: var(--bg-panel);
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+        }
+        
+        .login-title {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px var(--primary-color);
+        }
+        
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        
+        .access-denied {
+            color: var(--danger-color);
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            display: none;
+            animation: blink 0.5s ease-in-out 3;
+        }
+        
+        .login-hint {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        .decrypting {
+            display: none;
+            text-align: center;
+            color: var(--primary-color);
+            margin-top: 15px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--text-dim);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="crt-overlay"></div>
+    
+    <div class="container">
+        <header class="terminal-header">
+            <div class="header-line">
+                <span class="blink">█</span> SECURE ACCESS CONTROL v3.14.2
+            </div>
+            <div class="header-subline">
+                [SYSTEM STATUS: LOCKED] [ENCRYPTION: AES-256] [AUTH REQUIRED]
+            </div>
+        </header>
+
+        <div class="login-container">
+            <div class="login-box">
+                <div class="login-title">
+                    ACCESS RESTRICTED
+                </div>
+                <div class="login-subtitle">
+                    ENTER PASSPHRASE TO DECRYPT ADMIN PANEL
+                </div>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>PASSPHRASE:</label>
+                        <input 
+                            type="password" 
+                            id="passphrase" 
+                            class="terminal-input" 
+                            placeholder="Enter your passphrase..."
+                            autocomplete="off"
+                            autofocus
+                        >
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+                            <span class="btn-icon">🔓</span> DECRYPT & ACCESS
+                        </button>
+                    </div>
+                    
+                    <div class="access-denied" id="accessDenied">
+                        ⚠ ACCESS DENIED - INVALID PASSPHRASE
+                    </div>
+                    
+                    <div class="decrypting" id="decrypting">
+                        <div class="spinner"></div>
+                        <div style="margin-top: 10px;">DECRYPTING DATA...</div>
+                    </div>
+                </form>
+                
+                <div class="login-hint">
+                    This panel is encrypted with AES-256.<br>
+                    Without the correct passphrase, access is impossible.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CryptoJS library для шифрования -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="encrypted_admin.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const passphrase = document.getElementById('passphrase').value;
+            const accessDenied = document.getElementById('accessDenied');
+            const decryptingEl = document.getElementById('decrypting');
+            
+            accessDenied.style.display = 'none';
+            decryptingEl.style.display = 'block';
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            try {
+                const decrypted = CryptoJS.AES.decrypt(ENCRYPTED_ADMIN_DATA, passphrase);
+                const decryptedStr = decrypted.toString(CryptoJS.enc.Utf8);
+                
+                if (!decryptedStr) {
+                    throw new Error('Invalid passphrase');
+                }
+                
+                sessionStorage.setItem('admin_authenticated', 'true');
+                sessionStorage.setItem('admin_session_key', passphrase);
+                
+                const baseHref = window.location.href.replace(/[^/]+$/, '');
+                let htmlWithBase = decryptedStr.replace('<head>', `<head><base href="${baseHref}">`);
+                
+                try {
+                    const cssResp = await fetch(baseHref + 'style.css');
+                    if (cssResp.ok) {
+                        const cssText = await cssResp.text();
+                        htmlWithBase = htmlWithBase.replace(
+                            '<link rel="stylesheet" href="style.css">',
+                            `<style>${cssText}</style>`
+                        );
+                    }
+                } catch {}
+                
+                try {
+                    const jsResp = await fetch(baseHref + 'editor.js');
+                    if (jsResp.ok) {
+                        const jsText = await jsResp.text();
+                        const safeJs = jsText.replace(/<\/script>/gi, '</scr' + 'ipt>');
+                        const openIdx = htmlWithBase.indexOf('<script src="editor.js">');
+                        const marker = 'editor.js"></' + 'script>';
+                        if (openIdx !== -1) {
+                            const closeIdx = htmlWithBase.indexOf(marker, openIdx);
+                            if (closeIdx !== -1) {
+                                const before = htmlWithBase.slice(0, openIdx);
+                                const after = htmlWithBase.slice(closeIdx + marker.length);
+                                htmlWithBase = before + '<scr' + 'ipt>' + safeJs + '</scr' + 'ipt>' + after;
+                            }
+                        }
+                    }
+                } catch {}
+                
+                const blob = new Blob([htmlWithBase], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                window.location.href = url;
+                
+            } catch (error) {
+                decryptingEl.style.display = 'none';
+                accessDenied.style.display = 'block';
+                document.getElementById('passphrase').value = '';
+                document.getElementById('passphrase').focus();
+            }
+        });
+        
+        window.addEventListener('load', () => {
+            const title = document.querySelector('.login-title');
+            const text = title.textContent;
+            title.textContent = '';
+            
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < text.length) {
+                    title.textContent += text.charAt(i);
+                    i++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 50);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,11 @@
+# Netlify configuration file
+# Используй если хочешь задеплоить на Netlify
+
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
