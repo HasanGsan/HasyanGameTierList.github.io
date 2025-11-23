@@ -32,20 +32,21 @@ async function renderTierList() {
     
     tierListContainer.innerHTML = '';
     
+    const tierRows = [];
     TIERS.forEach(tier => {
         const tierRow = document.createElement('div');
         tierRow.className = 'tier-row';
         tierRow.style.animationDelay = `${TIERS.indexOf(tier) * 0.1}s`;
-        
+
         const tierLabel = document.createElement('div');
         tierLabel.className = `tier-label tier-${tier}`;
         tierLabel.textContent = tier;
-        
+
         const tierContent = document.createElement('div');
         tierContent.className = 'tier-content';
-        
+
         const tierGames = grouped[tier];
-        
+
         if (tierGames.length === 0) {
             const emptyMessage = document.createElement('div');
             emptyMessage.className = 'empty-tier';
@@ -56,25 +57,33 @@ async function renderTierList() {
                 const gameCard = document.createElement('div');
                 gameCard.className = 'game-card';
                 gameCard.style.animationDelay = `${(TIERS.indexOf(tier) * 0.1) + (index * 0.05)}s`;
-                
+
                 const img = document.createElement('img');
                 img.src = game.image;
                 img.alt = game.title;
-                
+
                 const title = document.createElement('div');
                 title.className = 'game-title';
                 title.textContent = game.title;
-                
+
                 gameCard.appendChild(img);
                 gameCard.appendChild(title);
                 gameCard.addEventListener('click', () => showGameDescription(game));
                 tierContent.appendChild(gameCard);
             });
         }
-        
+
         tierRow.appendChild(tierLabel);
         tierRow.appendChild(tierContent);
         tierListContainer.appendChild(tierRow);
+        tierRows.push(tierRow);
+    });
+
+    // Animate rows in sequence
+    tierRows.forEach((row, index) => {
+        setTimeout(() => {
+            row.classList.add('fade-in');
+        }, index * 200);
     });
     
     updateStats(games);
@@ -114,17 +123,17 @@ function startHackingSequence() {
 
     const content = document.getElementById('hackingContent');
     const hackLines = [
-        {text: "> INITIATING BIOS HACK SEQUENCE...", delay: 200, type: 'command'},
-        {text: "[SYSTEM]: Mounting virtual partitions...", delay: 400, type: 'output'},
-        {text: "> sudo rm -rf / --no-preserve-root", delay: 300, type: 'command'},
-        {text: "[ERROR]: Permission denied. Escalating privileges...", delay: 500, type: 'output'},
-        {text: "> exploit CVE-2024-1337 --target=hasyan_archives", delay: 400, type: 'command'},
-        {text: "[SUCCESS]: Vulnerability exploited. Bypassing security...", delay: 600, type: 'output'},
-        {text: "> inject payload --type=mem_exec --offset=0x7FF", delay: 350, type: 'command'},
-        {text: "[SYSTEM]: Memory injection successful. Overwriting kernel...", delay: 550, type: 'output'},
-        {text: "> decrypt --algo=aes256 --key=0x4E336E --target=/sys/tier_data", delay: 450, type: 'command'},
-        {text: "[SUCCESS]: Data decrypted. Loading archives...", delay: 700, type: 'output'},
-        {text: "ACCESS GRANTED. WELCOME TO HASYAN ARCHIVES.", delay: 800, type: 'success'}
+        {text: "> INITIATING BIOS HACK SEQUENCE...", delay: 50, type: 'command'},
+        {text: "[SYSTEM]: Mounting virtual partitions...", delay: 100, type: 'output'},
+        {text: "> sudo rm -rf / --no-preserve-root", delay: 75, type: 'command'},
+        {text: "[ERROR]: Permission denied. Escalating privileges...", delay: 125, type: 'output'},
+        {text: "> exploit CVE-2024-1337 --target=hasyan_archives", delay: 100, type: 'command'},
+        {text: "[SUCCESS]: Vulnerability exploited. Bypassing security...", delay: 150, type: 'output'},
+        {text: "> inject payload --type=mem_exec --offset=0x7FF", delay: 87, type: 'command'},
+        {text: "[SYSTEM]: Memory injection successful. Overwriting kernel...", delay: 137, type: 'output'},
+        {text: "> decrypt --algo=aes256 --key=0x4E336E --target=/sys/tier_data", delay: 112, type: 'command'},
+        {text: "[SUCCESS]: Data decrypted. Loading archives...", delay: 175, type: 'output'},
+        {text: "ACCESS GRANTED. WELCOME TO HASYAN ARCHIVES.", delay: 200, type: 'success'}
     ];
 
     let totalDelay = 0;
@@ -144,43 +153,20 @@ function startHackingSequence() {
                     logo.className = 'hack-logo';
                     logo.innerHTML = '⚡ H4SY4N ⚡';
                     content.appendChild(logo);
-                    
+
                     setTimeout(() => {
                         overlay.style.opacity = '0';
                         setTimeout(() => {
                             document.body.removeChild(overlay);
                             renderTierList();
-                        }, 1000);
-                    }, 2000);
-                }, 500);
+                        }, 300);
+                    }, 500);
+                }, 100);
             }
         }, totalDelay);
         totalDelay += line.delay;
     });
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep(frequency, duration) {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = frequency;
-        oscillator.type = 'square';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + duration);
-    }
-
-    setTimeout(() => playBeep(800, 0.1), 200);
-    setTimeout(() => playBeep(600, 0.1), 600);
-    setTimeout(() => playBeep(1000, 0.2), 1200);
-    setTimeout(() => playBeep(400, 0.1), 1800);
-    setTimeout(() => playBeep(1200, 0.3), 2500);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -229,14 +215,17 @@ function showGameDescription(game) {
     const img = document.getElementById('viewImage');
     const tier = document.getElementById('viewTier');
     const desc = document.getElementById('viewDescription');
-    title.textContent = game.title;
+    title.innerHTML = `${game.title} - <span class="tier-modal tier-${game.tier}">TIER ${game.tier}</span>`;
     img.src = game.image;
     img.alt = game.title;
-    tier.textContent = `TIER: ${game.tier}`;
     desc.textContent = game.description && game.description.length ? game.description : '[NO DESCRIPTION]';
     overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
     const closeBtn = document.getElementById('viewCloseBtn');
-    const close = () => { overlay.style.display = 'none'; };
+    const close = () => {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+    };
     closeBtn.onclick = close;
     overlay.onclick = (e) => { if (e.target === overlay) close(); };
 }
