@@ -414,7 +414,7 @@ function renderGamesList() {
 
             gameItem.innerHTML = `
                 <div class="game-item-image">
-                    <img src="${game.image}" alt="${game.title}" style="width:100%; height:100%; object-fit:cover; background:#000;">
+                    <img src="${game.image}" alt="${game.title}" style="width:10%; height:10%; object-fit:cover; background:#000;">
                 </div>
                 <div class="game-item-info">
                     <div class="game-item-title">${game.title}</div>
