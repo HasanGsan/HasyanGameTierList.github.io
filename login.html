@@ -20,6 +20,7 @@
             border: 3px solid var(--border-color);
             background: var(--bg-panel);
             box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+            position: relative;
         }
         
         .login-title {
@@ -77,21 +78,31 @@
     </style>
 </head>
 <body>
+    <canvas id="matrixRain"></canvas>
     <div class="scanlines"></div>
     <div class="crt-overlay"></div>
+    <div class="vignette"></div>
     
     <div class="container">
-        <header class="terminal-header">
+        <header class="terminal-header admin-header">
+            <span class="hud-corner hud-tl"></span>
+            <span class="hud-corner hud-tr"></span>
+            <span class="hud-corner hud-bl"></span>
+            <span class="hud-corner hud-br"></span>
             <div class="header-line">
                 <span class="blink">█</span> SECURE ACCESS CONTROL v3.14.2
             </div>
             <div class="header-subline">
-                [SYSTEM STATUS: LOCKED] [ENCRYPTION: AES-256] [AUTH REQUIRED]
+                <span class="status-dot status-dot-danger"></span>[SYSTEM STATUS: LOCKED] [ENCRYPTION: AES-256] [AUTH REQUIRED]
             </div>
         </header>
 
         <div class="login-container">
             <div class="login-box">
+                <span class="hud-corner hud-tl"></span>
+                <span class="hud-corner hud-tr"></span>
+                <span class="hud-corner hud-bl"></span>
+                <span class="hud-corner hud-br"></span>
                 <div class="login-title">
                     ACCESS RESTRICTED
                 </div>
@@ -139,6 +150,50 @@
     <!-- CryptoJS library для шифрования -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="encrypted_admin.js"></script>
+    <script>
+        const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        (function initMatrixRain() {
+            if (REDUCED_MOTION) return;
+            const canvas = document.getElementById('matrixRain');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const chars = 'アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF#$%&';
+            let columns, drops, fontSize = window.innerWidth < 600 ? 22 : 16;
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                columns = Math.ceil(canvas.width / fontSize);
+                drops = new Array(columns).fill(0).map(() => Math.random() * -50);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 14, 10, 0.08)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
+                for (let i = 0; i < columns; i++) {
+                    const char = chars.charAt(Math.floor(Math.random() * chars.length));
+                    const y = drops[i] * fontSize;
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.4)';
+                    ctx.fillText(char, i * fontSize, y);
+                    if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }
+            setInterval(draw, 55);
+        })();
+
+        (function initAmbientGlitch() {
+            if (REDUCED_MOTION) return;
+            const trigger = () => {
+                document.body.classList.add('glitch-pulse');
+                setTimeout(() => document.body.classList.remove('glitch-pulse'), 180);
+                setTimeout(trigger, 6000 + Math.random() * 9000);
+            };
+            setTimeout(trigger, 4000 + Math.random() * 4000);
+        })();
+    </script>
     <script>
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();

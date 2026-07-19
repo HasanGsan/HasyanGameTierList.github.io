@@ -1,5 +1,93 @@
 const TIERS = ['S', 'A', 'B', 'C', 'D', 'F'];
 
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ==== Матричный дождь на фоне ====
+function initMatrixRain() {
+    if (REDUCED_MOTION) return;
+    const canvas = document.getElementById('matrixRain');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const chars = 'アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF#$%&';
+    let columns, drops, fontSize = window.innerWidth < 600 ? 22 : 16;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        columns = Math.ceil(canvas.width / fontSize);
+        drops = new Array(columns).fill(0).map(() => Math.random() * -50);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function draw() {
+        ctx.fillStyle = 'rgba(10, 14, 10, 0.08)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
+        for (let i = 0; i < columns; i++) {
+            const char = chars.charAt(Math.floor(Math.random() * chars.length));
+            const y = drops[i] * fontSize;
+            // Ведущий символ ярче, хвост тусклее - классический эффект "дождя"
+            ctx.fillStyle = 'rgba(180, 255, 200, 0.55)';
+            ctx.fillText(char, i * fontSize, y);
+            if (y > 0 && y < canvas.height) {
+                ctx.fillStyle = 'rgba(0, 255, 65, 0.25)';
+            }
+            if (y > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+    setInterval(draw, 55);
+}
+
+// ==== Периодический "системный сбой" - лёгкий глитч всего экрана ====
+function initAmbientGlitch() {
+    if (REDUCED_MOTION) return;
+    const trigger = () => {
+        document.body.classList.add('glitch-pulse');
+        setTimeout(() => document.body.classList.remove('glitch-pulse'), 180);
+        setTimeout(trigger, 6000 + Math.random() * 9000);
+    };
+    setTimeout(trigger, 4000 + Math.random() * 4000);
+}
+
+// ==== Наклон карточек 3D вслед за курсором ====
+function attachTiltEffect(el, intensity = 14) {
+    if (REDUCED_MOTION) return;
+    el.addEventListener('mousemove', (e) => {
+        const rect = el.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        const rotateY = (x - 0.5) * intensity;
+        const rotateX = (0.5 - y) * intensity;
+        el.style.transform = `perspective(500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.08)`;
+    });
+    el.addEventListener('mouseleave', () => {
+        el.style.transform = '';
+    });
+}
+
+// ==== Печатающийся текст (для описаний в модалке) ====
+function typeText(el, text) {
+    if (REDUCED_MOTION || !text) {
+        el.textContent = text || '';
+        return;
+    }
+    el.textContent = '';
+    const total = text.length;
+    const steps = Math.min(total, 90);
+    const chunk = Math.max(1, Math.ceil(total / steps));
+    let i = 0;
+    function tick() {
+        i += chunk;
+        el.textContent = text.slice(0, i);
+        if (i < total) requestAnimationFrame(tick);
+    }
+    tick();
+}
+
 // Известный адрес сайта - подстраховка на случай, если страница открыта
 // в контексте, где относительные пути не разрешаются (fetch падает с
 // "Failed to parse URL from ...").
@@ -70,7 +158,7 @@ async function renderTierList() {
         } else {
             tierGames.forEach((game, index) => {
                 const gameCard = document.createElement('div');
-                gameCard.className = 'game-card';
+                gameCard.className = `game-card tier-${tier}`;
                 gameCard.style.animationDelay = `${(TIERS.indexOf(tier) * 0.1) + (index * 0.05)}s`;
 
                 const img = document.createElement('img');
@@ -84,6 +172,7 @@ async function renderTierList() {
                 gameCard.appendChild(img);
                 gameCard.appendChild(title);
                 gameCard.addEventListener('click', () => showGameDescription(game));
+                attachTiltEffect(gameCard);
                 tierContent.appendChild(gameCard);
             });
         }
@@ -105,7 +194,7 @@ async function renderTierList() {
 }
 
 function updateStats(games, meta) {
-    document.getElementById('totalGames').textContent = games.length;
+    animateCount(document.getElementById('totalGames'), games.length);
     if (meta && meta.generatedAt) {
         document.getElementById('lastUpdate').textContent = formatDate(new Date(meta.generatedAt));
         return;
@@ -117,6 +206,21 @@ function updateStats(games, meta) {
     } else {
         document.getElementById('lastUpdate').textContent = 'NEVER';
     }
+}
+
+function animateCount(el, target) {
+    if (REDUCED_MOTION || target === 0) {
+        el.textContent = target;
+        return;
+    }
+    const duration = 800;
+    const start = performance.now();
+    function tick(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        el.textContent = Math.round(progress * target);
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
 }
 
 function formatDate(date) {
@@ -189,6 +293,8 @@ function startHackingSequence() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    initMatrixRain();
+    initAmbientGlitch();
     await startHackingSequence();
     
     const prompt = document.querySelector('.command-prompt');
@@ -213,6 +319,10 @@ function ensureViewModal() {
     overlay.id = 'viewModal';
     overlay.innerHTML = `
         <div class="modal-window">
+            <span class="hud-corner hud-tl"></span>
+            <span class="hud-corner hud-tr"></span>
+            <span class="hud-corner hud-bl"></span>
+            <span class="hud-corner hud-br"></span>
             <div class="modal-header">
                 <div class="modal-title" id="viewTitle"></div>
                 <button class="btn btn-secondary" id="viewCloseBtn">CLOSE</button>
@@ -224,6 +334,7 @@ function ensureViewModal() {
         </div>
     `;
     document.body.appendChild(overlay);
+    attachTiltEffect(document.getElementById('viewImageWrap'), 8);
 }
 
 function showGameDescription(game) {
@@ -236,7 +347,7 @@ function showGameDescription(game) {
     title.innerHTML = `${game.title} - <span class="tier-modal tier-${game.tier}">TIER ${game.tier}</span>`;
     img.src = game.image;
     img.alt = game.title;
-    desc.textContent = game.description && game.description.length ? game.description : '[NO DESCRIPTION]';
+    typeText(desc, game.description && game.description.length ? game.description : '[NO DESCRIPTION]');
     const tierVar = `var(--tier-${game.tier.toLowerCase()})`;
     modalWindow.style.borderColor = tierVar;
     modalWindow.style.boxShadow = `0 0 50px ${tierVar}, inset 0 0 30px rgba(0, 255, 65, 0.05)`;

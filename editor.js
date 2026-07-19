@@ -18,6 +18,56 @@ function resolveRepoUrl(fileName) {
 
 let currentImage = null;
 let croppedImageData = null;
+
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Создаёт canvas сам, если его нет в разметке (актуально для зашифрованной
+// панели редактора, чью HTML-структуру мы не редактируем напрямую).
+function initMatrixRain() {
+    if (REDUCED_MOTION) return;
+    let canvas = document.getElementById('matrixRain');
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'matrixRain';
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.55;';
+        document.body.insertBefore(canvas, document.body.firstChild);
+    }
+    const ctx = canvas.getContext('2d');
+    const chars = 'アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF#$%&';
+    let columns, drops, fontSize = window.innerWidth < 600 ? 22 : 16;
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        columns = Math.ceil(canvas.width / fontSize);
+        drops = new Array(columns).fill(0).map(() => Math.random() * -50);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    function draw() {
+        ctx.fillStyle = 'rgba(10, 14, 10, 0.08)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
+        for (let i = 0; i < columns; i++) {
+            const char = chars.charAt(Math.floor(Math.random() * chars.length));
+            const y = drops[i] * fontSize;
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.4)';
+            ctx.fillText(char, i * fontSize, y);
+            if (y > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(draw, 55);
+}
+
+function initAmbientGlitch() {
+    if (REDUCED_MOTION) return;
+    const trigger = () => {
+        document.body.classList.add('glitch-pulse');
+        setTimeout(() => document.body.classList.remove('glitch-pulse'), 180);
+        setTimeout(trigger, 6000 + Math.random() * 9000);
+    };
+    setTimeout(trigger, 4000 + Math.random() * 4000);
+}
 let cropStartX = 0, cropStartY = 0;
 let cropEndX = 0, cropEndY = 0;
 let isCropping = false;
@@ -421,6 +471,8 @@ window.refreshFromRepo = refreshFromRepo;
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', async () => {
+    initMatrixRain();
+    initAmbientGlitch();
     await autoLoadFromRepoIfEmpty();
     initCropHandlers();
     renderGamesList();

@@ -45,6 +45,78 @@ body {
     0% { transform: translateY(0); }
     100% { transform: translateY(10px); }
 }
+#matrixRain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.55;
+}
+.vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9997;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.6) 100%);
+}
+/* Ambient system glitch - fires periodically via JS toggling this class on <body> */
+body.glitch-pulse {
+    animation: bodyGlitch 0.18s steps(2, jump-none);
+}
+@keyframes bodyGlitch {
+    0% { filter: none; }
+    25% { filter: hue-rotate(25deg) saturate(1.4); transform: translate(-1px, 1px); }
+    50% { filter: hue-rotate(-20deg) saturate(1.2); transform: translate(1px, -1px); }
+    75% { filter: none; transform: translate(-1px, 0); }
+    100% { filter: none; transform: translate(0); }
+}
+/* HUD corner brackets - decorative sci-fi frame accents on panels */
+.hud-corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    z-index: 2;
+}
+.hud-corner::before,
+.hud-corner::after {
+    content: '';
+    position: absolute;
+    background: var(--primary-color);
+    box-shadow: 0 0 8px var(--primary-color);
+}
+.hud-corner::before { width: 100%; height: 3px; top: 0; left: 0; }
+.hud-corner::after { width: 3px; height: 100%; top: 0; left: 0; }
+.hud-tl { top: -3px; left: -3px; }
+.hud-tr { top: -3px; right: -3px; }
+.hud-tr::before, .hud-tr::after { left: auto; right: 0; }
+.hud-bl { bottom: -3px; left: -3px; }
+.hud-bl::before, .hud-bl::after { top: auto; bottom: 0; }
+.hud-br { bottom: -3px; right: -3px; }
+.hud-br::before, .hud-br::after { top: auto; bottom: 0; left: auto; right: 0; }
+/* Status indicator dots */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    box-shadow: 0 0 6px var(--primary-color);
+    margin-right: 6px;
+    vertical-align: middle;
+    animation: statusPulse 1.6s ease-in-out infinite;
+}
+.status-dot-danger {
+    background: var(--danger-color);
+    box-shadow: 0 0 6px var(--danger-color);
+}
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.75); }
+}
 .crt-overlay {
     position: fixed;
     top: 0;
@@ -69,6 +141,7 @@ body {
     margin-bottom: 20px;
     box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), inset 0 0 20px rgba(0, 255, 65, 0.05);
     animation: borderPulse 2s ease-in-out infinite;
+    position: relative;
 }
 .admin-header {
     border-color: var(--danger-color);
@@ -83,6 +156,29 @@ body {
     font-weight: bold;
     letter-spacing: 2px;
     text-shadow: 0 0 10px var(--primary-color);
+    position: relative;
+    display: inline-block;
+    cursor: default;
+}
+.header-line[data-text]:hover::before,
+.header-line[data-text]:hover::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: var(--bg-panel);
+    overflow: hidden;
+}
+.header-line[data-text]:hover::before {
+    left: 3px;
+    text-shadow: -2px 0 #ff00ff;
+    animation: glitch1 0.3s infinite linear alternate-reverse;
+}
+.header-line[data-text]:hover::after {
+    left: -3px;
+    text-shadow: 2px 0 #00ffff;
+    animation: glitch2 0.3s infinite linear alternate-reverse;
 }
 .header-subline {
     font-size: 0.9rem;
@@ -103,6 +199,7 @@ body {
     padding: 20px;
     box-shadow: 0 0 10px rgba(0, 255, 65, 0.3), inset 0 0 30px rgba(0, 255, 65, 0.02);
     min-height: 500px;
+    position: relative;
 }
 .command-prompt {
     font-size: 1.1rem;
@@ -127,6 +224,7 @@ body {
     transition: all 0.3s ease;
     opacity: 0;
     transform: translateY(20px);
+    position: relative;
 }
 .tier-row.fade-in {
     opacity: 1;
@@ -179,13 +277,35 @@ body {
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.1s ease-out;
+    will-change: transform;
 }
 .game-card:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px var(--primary-color);
     z-index: 10;
 }
+.game-card::after {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 45%;
+    background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.3), transparent);
+    pointer-events: none;
+}
+.game-card:hover::after {
+    animation: cardScan 0.6s linear;
+}
+@keyframes cardScan {
+    from { top: -100%; }
+    to { top: 130%; }
+}
+.game-card.tier-S:hover { border-color: var(--tier-s); box-shadow: 0 0 25px var(--tier-s); }
+.game-card.tier-A:hover { border-color: var(--tier-a); box-shadow: 0 0 25px var(--tier-a); }
+.game-card.tier-B:hover { border-color: var(--tier-b); box-shadow: 0 0 25px var(--tier-b); }
+.game-card.tier-C:hover { border-color: var(--tier-c); box-shadow: 0 0 25px var(--tier-c); }
+.game-card.tier-D:hover { border-color: var(--tier-d); box-shadow: 0 0 25px var(--tier-d); }
+.game-card.tier-F:hover { border-color: var(--tier-f); box-shadow: 0 0 25px var(--tier-f); }
 .game-card img {
     width: 100%;
     height: 100%;
@@ -205,10 +325,12 @@ body {
     line-height: 1.2;
     border-top: 1px solid var(--border-color);
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .game-card:hover .game-title {
     opacity: 1;
+    transform: translateY(0);
 }
 .empty-tier {
     color: var(--text-dim);
@@ -849,3 +971,18 @@ body {
 .tier-modal.tier-C { color: var(--tier-c); }
 .tier-modal.tier-D { color: var(--tier-d); }
 .tier-modal.tier-F { color: var(--tier-f); }
+
+@media (prefers-reduced-motion: reduce) {
+    #matrixRain { display: none; }
+    .scanlines { animation: none; }
+    .terminal-header { animation: none; }
+    .blink { animation: none; opacity: 1; }
+    .status-dot { animation: none; }
+    .access-icon { animation: none; }
+    .game-card:hover { transform: scale(1.03); }
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
