@@ -87,8 +87,16 @@ function initCropHandlers() {
         if (!isCropping) return;
         
         const rect = canvas.getBoundingClientRect();
-        cropEndX = e.clientX - rect.left;
-        cropEndY = e.clientY - rect.top;
+        const curX = e.clientX - rect.left;
+        const curY = e.clientY - rect.top;
+        
+        // Принудительно делаем выделение квадратным - чтобы все
+        // картинки потом ложились в квадратную рамку без обрезки/пустот
+        const dx = curX - cropStartX;
+        const dy = curY - cropStartY;
+        const side = Math.max(Math.abs(dx), Math.abs(dy));
+        cropEndX = Math.max(0, Math.min(canvas.width, cropStartX + Math.sign(dx || 1) * side));
+        cropEndY = Math.max(0, Math.min(canvas.height, cropStartY + Math.sign(dy || 1) * side));
         
         // Перерисовываем изображение с прямоугольником выделения
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -122,12 +130,13 @@ function applyCrop() {
     const canvas = document.getElementById('cropCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Если не выделено - берем всё изображение
+    // Если не выделено - берём центральный квадрат картинки
     if (cropStartX === 0 && cropEndX === 0) {
-        cropStartX = 0;
-        cropStartY = 0;
-        cropEndX = canvas.width;
-        cropEndY = canvas.height;
+        const side = Math.min(canvas.width, canvas.height);
+        cropStartX = (canvas.width - side) / 2;
+        cropStartY = (canvas.height - side) / 2;
+        cropEndX = cropStartX + side;
+        cropEndY = cropStartY + side;
     }
     
     // Нормализуем координаты
@@ -339,7 +348,7 @@ function renderGamesList() {
 
             gameItem.innerHTML = `
                 <div class="game-item-image">
-                    <img src="${game.image}" alt="${game.title}" style="width:100%; height:100%; object-fit:contain; background:#000;">
+                    <img src="${game.image}" alt="${game.title}" style="width:100%; height:100%; object-fit:cover; background:#000;">
                 </div>
                 <div class="game-item-info">
                     <div class="game-item-title">${game.title}</div>
@@ -359,8 +368,44 @@ function renderGamesList() {
     });
 }
 
+// Если в браузере ещё нет локальных данных - подтягиваем актуальный
+// tier-data.json из репозитория, чтобы редактор не открывался пустым
+// (или со старыми данными) на новом устройстве/браузере.
+async function autoLoadFromRepoIfEmpty() {
+    if (localStorage.getItem('tierListData')) return;
+    try {
+        const resp = await fetch('tier-data.json', { cache: 'no-store' });
+        if (!resp.ok) return;
+        const json = await resp.json();
+        if (json && Array.isArray(json.games)) {
+            saveGames(json.games);
+        }
+    } catch (e) {}
+}
+
+// Принудительное обновление из репозитория (перетирает несохранённые
+// локальные правки - поэтому со спросом подтверждения)
+async function refreshFromRepo() {
+    if (!confirm('Это заменит текущие локальные данные в редакторе данными из tier-data.json репозитория. Несохранённые правки потеряются. Продолжить?')) {
+        return;
+    }
+    try {
+        const resp = await fetch('tier-data.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('Не удалось загрузить tier-data.json');
+        const json = await resp.json();
+        if (!json || !Array.isArray(json.games)) throw new Error('Некорректный формат файла');
+        saveGames(json.games);
+        renderGamesList();
+        alert('Обновлено из репозитория');
+    } catch (err) {
+        alert('Ошибка обновления: ' + err.message);
+    }
+}
+window.refreshFromRepo = refreshFromRepo;
+
 // Инициализация
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await autoLoadFromRepoIfEmpty();
     initCropHandlers();
     renderGamesList();
     
@@ -460,6 +505,14 @@ document.addEventListener('DOMContentLoaded', () => {
             hiddenInput.click();
         });
 
+        const refreshBtn = document.createElement('button');
+        refreshBtn.className = 'btn btn-secondary';
+        refreshBtn.id = 'refreshRepoBtn';
+        refreshBtn.style.marginLeft = '10px';
+        refreshBtn.textContent = '🔄 ОБНОВИТЬ ИЗ РЕПОЗИТОРИЯ';
+        refreshBtn.addEventListener('click', refreshFromRepo);
+        footer.appendChild(refreshBtn);
+
         hiddenInput.addEventListener('change', async (e) => {
             if (!e.target.files || !e.target.files[0]) return;
             try {
@@ -498,15 +551,15 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-weight: bold; margin-bottom: 10px;">GITHUB SYNC</div>
             <div class="form-group">
                 <label>OWNER:</label>
-                <input type="text" id="ghOwner" class="terminal-input" placeholder="hasangsan">
+                <input type="text" id="ghOwner" class="terminal-input" value="hasangsan" placeholder="hasangsan">
             </div>
             <div class="form-group">
                 <label>REPO:</label>
-                <input type="text" id="ghRepo" class="terminal-input" placeholder="HasyanGameTierList.github.io">
+                <input type="text" id="ghRepo" class="terminal-input" value="HasyanGameTierList.github.io" placeholder="HasyanGameTierList.github.io">
             </div>
             <div class="form-group">
                 <label>BRANCH:</label>
-                <input type="text" id="ghBranch" class="terminal-input" placeholder="main">
+                <input type="text" id="ghBranch" class="terminal-input" value="main" placeholder="main">
             </div>
             <div class="form-group">
                 <label>TOKEN (fine-grained PAT, доступ только к этому репо, Contents: Read and write):</label>
