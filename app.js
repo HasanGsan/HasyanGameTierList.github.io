@@ -6,15 +6,15 @@ async function loadGames() {
         if (resp.ok) {
             const json = await resp.json();
             if (json && Array.isArray(json.games)) {
-                return json.games;
+                return { games: json.games, meta: json.meta || null };
             }
         }
     } catch (e) {}
     const data = localStorage.getItem('tierListData');
     if (data) {
-        return JSON.parse(data);
+        return { games: JSON.parse(data), meta: null };
     }
-    return [];
+    return { games: [], meta: null };
 }
 
 function groupGamesByTier(games) {
@@ -26,7 +26,7 @@ function groupGamesByTier(games) {
 }
 
 async function renderTierList() {
-    const games = await loadGames();
+    const { games, meta } = await loadGames();
     const grouped = groupGamesByTier(games);
     const tierListContainer = document.getElementById('tierList');
     
@@ -86,11 +86,15 @@ async function renderTierList() {
         }, index * 200);
     });
     
-    updateStats(games);
+    updateStats(games, meta);
 }
 
-function updateStats(games) {
+function updateStats(games, meta) {
     document.getElementById('totalGames').textContent = games.length;
+    if (meta && meta.generatedAt) {
+        document.getElementById('lastUpdate').textContent = formatDate(new Date(meta.generatedAt));
+        return;
+    }
     const lastUpdateData = localStorage.getItem('lastUpdate');
     if (lastUpdateData) {
         const date = new Date(lastUpdateData);

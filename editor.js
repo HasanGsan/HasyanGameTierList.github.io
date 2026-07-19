@@ -266,51 +266,96 @@ function changeTier(id, newTier) {
     }
 }
 
+// Переместить игру на позицию перед targetId (сохраняет порядок внутри тира,
+// а если targetId в другом тире - переносит и туда тоже)
+function moveGame(draggedId, targetId) {
+    if (draggedId === targetId) return;
+    const games = loadGames();
+    const fromIdx = games.findIndex(g => g.id === draggedId);
+    if (fromIdx === -1) return;
+    const [dragged] = games.splice(fromIdx, 1);
+    let toIdx = games.findIndex(g => g.id === targetId);
+    if (toIdx === -1) toIdx = games.length;
+    if (games[toIdx]) dragged.tier = games[toIdx].tier;
+    games.splice(toIdx, 0, dragged);
+    saveGames(games);
+    renderGamesList();
+}
+
 // Отобразить список игр
+// Порядок в этом списке = порядок в массиве games = порядок на сайте.
+// Игры группируются по тиру, но НЕ сортируются по алфавиту, чтобы
+// перетаскивание карточек здесь напрямую управляло порядком на сайте.
 function renderGamesList() {
     const games = loadGames();
     const gamesListContainer = document.getElementById('gamesList');
-    
+
     if (games.length === 0) {
         gamesListContainer.innerHTML = '<div class="empty-tier">NO GAMES IN DATABASE</div>';
         return;
     }
-    
-    // Сортируем по tier и названию
-    games.sort((a, b) => {
-        const tierOrder = TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier);
-        if (tierOrder !== 0) return tierOrder;
-        return a.title.localeCompare(b.title);
-    });
-    
+
     gamesListContainer.innerHTML = '';
-    
-    games.forEach(game => {
-        const gameItem = document.createElement('div');
-        gameItem.className = 'game-item';
-        gameItem.draggable = true;
-        gameItem.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', String(game.id));
+
+    TIERS.forEach(tier => {
+        const tierGames = games.filter(g => g.tier === tier);
+
+        const header = document.createElement('div');
+        header.style.cssText = 'margin: 16px 0 6px; font-weight: bold; opacity: 0.8; letter-spacing: 1px;';
+        header.textContent = `— TIER ${tier} (${tierGames.length}) —`;
+        gamesListContainer.appendChild(header);
+
+        if (tierGames.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-tier';
+            empty.style.padding = '8px';
+            empty.textContent = '[перетащи карточку сюда]';
+            // пустой тир как цель для дропа - добавит игру в конец этого тира
+            empty.addEventListener('dragover', (e) => e.preventDefault());
+            empty.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const draggedId = Number(e.dataTransfer.getData('text/plain'));
+                if (!Number.isNaN(draggedId)) changeTier(draggedId, tier);
+            });
+            gamesListContainer.appendChild(empty);
+            return;
+        }
+
+        tierGames.forEach(game => {
+            const gameItem = document.createElement('div');
+            gameItem.className = 'game-item';
+            gameItem.draggable = true;
+
+            gameItem.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', String(game.id));
+            });
+            gameItem.addEventListener('dragover', (e) => e.preventDefault());
+            gameItem.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const draggedId = Number(e.dataTransfer.getData('text/plain'));
+                if (!Number.isNaN(draggedId)) moveGame(draggedId, game.id);
+            });
+
+            gameItem.innerHTML = `
+                <div class="game-item-image">
+                    <img src="${game.image}" alt="${game.title}">
+                </div>
+                <div class="game-item-info">
+                    <div class="game-item-title">${game.title}</div>
+                    <div class="game-item-tier">Tier: ${game.tier}</div>
+                </div>
+                <div class="game-item-actions">
+                    <select class="terminal-select" style="width: 100px;" onchange="changeTier(${game.id}, this.value)">
+                        ${TIERS.map(t => `<option value="${t}" ${game.tier === t ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select>
+                    <button class="btn btn-secondary" onclick="editDescription(${game.id})">EDIT DESC</button>
+                    <button class="btn btn-danger" onclick="deleteGame(${game.id})">DELETE</button>
+                </div>
+            `;
+
+            gamesListContainer.appendChild(gameItem);
         });
-        
-        gameItem.innerHTML = `
-            <div class="game-item-image">
-                <img src="${game.image}" alt="${game.title}">
-            </div>
-            <div class="game-item-info">
-                <div class="game-item-title">${game.title}</div>
-                <div class="game-item-tier">Tier: ${game.tier}</div>
-            </div>
-            <div class="game-item-actions">
-                <select class="terminal-select" style="width: 100px;" onchange="changeTier(${game.id}, this.value)">
-                    ${TIERS.map(tier => `<option value="${tier}" ${game.tier === tier ? 'selected' : ''}>${tier}</option>`).join('')}
-                </select>
-                <button class="btn btn-secondary" onclick="editDescription(${game.id})">EDIT DESC</button>
-                <button class="btn btn-danger" onclick="deleteGame(${game.id})">DELETE</button>
-            </div>
-        `;
-        
-        gamesListContainer.appendChild(gameItem);
     });
 }
 
@@ -443,6 +488,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    // Панель синхронизации с GitHub - коммитит tier-data.json и новые
+    // картинки напрямую в репозиторий, без скачивания файлов вручную
+    if (footer && !document.getElementById('githubSyncPanel')) {
+        const panel = document.createElement('div');
+        panel.id = 'githubSyncPanel';
+        panel.style.cssText = 'margin-top: 20px; padding: 15px; border: 1px solid var(--border-color);';
+        panel.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 10px;">GITHUB SYNC</div>
+            <div class="form-group">
+                <label>OWNER:</label>
+                <input type="text" id="ghOwner" class="terminal-input" placeholder="hasangsan">
+            </div>
+            <div class="form-group">
+                <label>REPO:</label>
+                <input type="text" id="ghRepo" class="terminal-input" placeholder="HasyanGameTierList.github.io">
+            </div>
+            <div class="form-group">
+                <label>BRANCH:</label>
+                <input type="text" id="ghBranch" class="terminal-input" placeholder="main">
+            </div>
+            <div class="form-group">
+                <label>TOKEN (fine-grained PAT, доступ только к этому репо, Contents: Read and write):</label>
+                <input type="password" id="ghToken" class="terminal-input" placeholder="github_pat_...">
+            </div>
+            <label style="font-size: 0.8rem; display: flex; gap: 6px; align-items: center; margin-bottom: 10px;">
+                <input type="checkbox" id="ghRemember"> запомнить токен на время вкладки (sessionStorage)
+            </label>
+            <button class="btn btn-primary" id="ghSyncBtn">⬆ SAVE TO GITHUB</button>
+            <div id="ghLog" style="margin-top: 10px; font-size: 0.8rem; white-space: pre-wrap;"></div>
+        `;
+        footer.appendChild(panel);
+
+        const cfg = JSON.parse(localStorage.getItem('githubSyncConfig') || '{}');
+        if (cfg.owner) document.getElementById('ghOwner').value = cfg.owner;
+        if (cfg.repo) document.getElementById('ghRepo').value = cfg.repo;
+        if (cfg.branch) document.getElementById('ghBranch').value = cfg.branch;
+        const savedToken = sessionStorage.getItem('ghToken');
+        if (savedToken) {
+            document.getElementById('ghToken').value = savedToken;
+            document.getElementById('ghRemember').checked = true;
+        }
+
+        document.getElementById('ghSyncBtn').addEventListener('click', syncToGithub);
+    }
+
     try {
         const tierEl = document.getElementById('gameTier');
         if (tierEl && !document.getElementById('gameDescription')) {
@@ -551,4 +641,125 @@ function editDescription(id) {
 }
 
 window.editDescription = editDescription;
+
+// ==== Синхронизация с GitHub через Git Data API ====
+// Собирает новые/изменённые картинки + tier-data.json в один атомарный коммит,
+// вместо ручного скачивания zip и коммита через веб-интерфейс/git.
+
+function ghLog(msg) {
+    const el = document.getElementById('ghLog');
+    if (el) el.textContent += msg + '\n';
+}
+
+async function ghApi(url, token, opts = {}) {
+    const resp = await fetch(`https://api.github.com${url}`, {
+        ...opts,
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json',
+            ...(opts.headers || {})
+        }
+    });
+    if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`${resp.status} ${resp.statusText}: ${errText}`);
+    }
+    return resp.json();
+}
+
+async function syncToGithub() {
+    const owner = document.getElementById('ghOwner').value.trim();
+    const repo = document.getElementById('ghRepo').value.trim();
+    const branch = document.getElementById('ghBranch').value.trim() || 'main';
+    const token = document.getElementById('ghToken').value.trim();
+    const remember = document.getElementById('ghRemember').checked;
+    const logEl = document.getElementById('ghLog');
+    const btn = document.getElementById('ghSyncBtn');
+    logEl.textContent = '';
+
+    if (!owner || !repo || !token) {
+        ghLog('ERROR: заполни owner, repo и token');
+        return;
+    }
+
+    localStorage.setItem('githubSyncConfig', JSON.stringify({ owner, repo, branch }));
+    if (remember) sessionStorage.setItem('ghToken', token);
+    else sessionStorage.removeItem('ghToken');
+
+    btn.disabled = true;
+    try {
+        const games = loadGames();
+        if (!games.length) throw new Error('Нет игр для синхронизации');
+
+        ghLog('Получаю последний коммит...');
+        const refData = await ghApi(`/repos/${owner}/${repo}/git/refs/heads/${branch}`, token);
+        const latestCommitSha = refData.object.sha;
+        const commitData = await ghApi(`/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, token);
+        const baseTreeSha = commitData.tree.sha;
+
+        const treeEntries = [];
+        const exportGames = [];
+
+        for (const game of games) {
+            let imagePath = game.image;
+            // Новые/изменённые картинки хранятся как base64 dataURL - их надо
+            // загрузить как blob. Старые уже ссылаются на images/xxx.webp.
+            if (typeof game.image === 'string' && game.image.startsWith('data:')) {
+                imagePath = `images/${game.id}.webp`;
+                const base64Content = game.image.split(',')[1];
+                ghLog(`Загружаю картинку: ${game.title}`);
+                const blob = await ghApi(`/repos/${owner}/${repo}/git/blobs`, token, {
+                    method: 'POST',
+                    body: JSON.stringify({ content: base64Content, encoding: 'base64' })
+                });
+                treeEntries.push({ path: imagePath, mode: '100644', type: 'blob', sha: blob.sha });
+                game.image = imagePath;
+            }
+            exportGames.push({
+                id: game.id,
+                title: game.title,
+                tier: game.tier,
+                image: imagePath,
+                description: game.description || ''
+            });
+        }
+
+        saveGames(games);
+
+        const meta = { generatedAt: new Date().toISOString(), total: exportGames.length, tiers: TIERS };
+        const dataJson = JSON.stringify({ meta, games: exportGames }, null, 2);
+        treeEntries.push({ path: 'tier-data.json', mode: '100644', type: 'blob', content: dataJson });
+
+        ghLog('Собираю дерево файлов...');
+        const tree = await ghApi(`/repos/${owner}/${repo}/git/trees`, token, {
+            method: 'POST',
+            body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries })
+        });
+
+        ghLog('Создаю коммит...');
+        const commit = await ghApi(`/repos/${owner}/${repo}/git/commits`, token, {
+            method: 'POST',
+            body: JSON.stringify({
+                message: `Обновление тир-листа (${new Date().toLocaleString('ru-RU')})`,
+                tree: tree.sha,
+                parents: [latestCommitSha]
+            })
+        });
+
+        ghLog('Обновляю ветку...');
+        await ghApi(`/repos/${owner}/${repo}/git/refs/heads/${branch}`, token, {
+            method: 'PATCH',
+            body: JSON.stringify({ sha: commit.sha })
+        });
+
+        ghLog(`ГОТОВО: https://github.com/${owner}/${repo}/commit/${commit.sha}`);
+        renderGamesList();
+    } catch (err) {
+        ghLog(`ERROR: ${err.message}`);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+window.syncToGithub = syncToGithub;
 
