@@ -204,7 +204,6 @@ function ensureViewModal() {
             </div>
             <div class="modal-body">
                 <div class="view-image" id="viewImageWrap"><img id="viewImage" alt=""></div>
-                <div class="view-tier" id="viewTier"></div>
                 <div class="view-description" id="viewDescription"></div>
             </div>
         </div>
@@ -217,12 +216,15 @@ function showGameDescription(game) {
     const overlay = document.getElementById('viewModal');
     const title = document.getElementById('viewTitle');
     const img = document.getElementById('viewImage');
-    const tier = document.getElementById('viewTier');
     const desc = document.getElementById('viewDescription');
+    const modalWindow = overlay.querySelector('.modal-window');
     title.innerHTML = `${game.title} - <span class="tier-modal tier-${game.tier}">TIER ${game.tier}</span>`;
     img.src = game.image;
     img.alt = game.title;
     desc.textContent = game.description && game.description.length ? game.description : '[NO DESCRIPTION]';
+    const tierVar = `var(--tier-${game.tier.toLowerCase()})`;
+    modalWindow.style.borderColor = tierVar;
+    modalWindow.style.boxShadow = `0 0 50px ${tierVar}, inset 0 0 30px rgba(0, 255, 65, 0.05)`;
     overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     const closeBtn = document.getElementById('viewCloseBtn');
