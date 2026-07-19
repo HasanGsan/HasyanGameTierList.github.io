@@ -163,8 +163,10 @@
                 sessionStorage.setItem('admin_authenticated', 'true');
                 sessionStorage.setItem('admin_session_key', passphrase);
                 
-                const baseHref = window.location.href.replace(/[^/]+$/, '');
-                let htmlWithBase = decryptedStr.replace('<head>', `<head><base href="${baseHref}">`);
+                const baseHref = new URL('.', window.location.href).href;
+                let htmlWithBase = /<head[^>]*>/i.test(decryptedStr)
+                    ? decryptedStr.replace(/<head[^>]*>/i, (match) => `${match}<base href="${baseHref}">`)
+                    : `<head><base href="${baseHref}"></head>${decryptedStr}`;
                 
                 try {
                     const cssResp = await fetch(baseHref + 'style.css');

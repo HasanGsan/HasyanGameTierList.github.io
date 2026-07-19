@@ -1,5 +1,21 @@
 const TIERS = ['S', 'A', 'B', 'C', 'D', 'F'];
 
+// Известный адрес сайта - подстраховка на случай, если редактор открыт
+// в контексте (например, blob-документ), где относительные пути ('tier-data.json')
+// не могут быть разрешены и fetch() падает с "Failed to parse URL from ...".
+const REPO_FALLBACK_BASE = 'https://hasangsan.github.io/HasyanGameTierList.github.io/';
+
+function resolveRepoUrl(fileName) {
+    try {
+        const resolved = new URL(fileName, document.baseURI);
+        // blob:/about: и т.п. не годятся как база - берём фолбэк
+        if (resolved.protocol === 'http:' || resolved.protocol === 'https:') {
+            return resolved.href;
+        }
+    } catch (e) {}
+    return REPO_FALLBACK_BASE + fileName;
+}
+
 let currentImage = null;
 let croppedImageData = null;
 let cropStartX = 0, cropStartY = 0;
@@ -374,7 +390,7 @@ function renderGamesList() {
 async function autoLoadFromRepoIfEmpty() {
     if (localStorage.getItem('tierListData')) return;
     try {
-        const resp = await fetch('tier-data.json', { cache: 'no-store' });
+        const resp = await fetch(resolveRepoUrl('tier-data.json'), { cache: 'no-store' });
         if (!resp.ok) return;
         const json = await resp.json();
         if (json && Array.isArray(json.games)) {
@@ -390,7 +406,7 @@ async function refreshFromRepo() {
         return;
     }
     try {
-        const resp = await fetch('tier-data.json', { cache: 'no-store' });
+        const resp = await fetch(resolveRepoUrl('tier-data.json'), { cache: 'no-store' });
         if (!resp.ok) throw new Error('Не удалось загрузить tier-data.json');
         const json = await resp.json();
         if (!json || !Array.isArray(json.games)) throw new Error('Некорректный формат файла');
